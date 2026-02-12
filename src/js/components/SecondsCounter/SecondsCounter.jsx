@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import './SecondsCounter.css';
+import { useEffect, useMemo, useState } from 'react';
 import { SecondsCounterDisplay } from './SecondsCounterDisplay';
 
-//create your first component
+import './SecondsCounter.css';
+
 const NUMERO_DIGITOS = 6;
+
 export const SecondsCounter = () => {
     const [contar, setContar] = useState(true);
     const [contador, setContador] = useState(0);
@@ -13,23 +14,17 @@ export const SecondsCounter = () => {
 
     const [alerta, setAlerta] = useState(false);
     const [valorAlerta, setValorAlerta] = useState(10);
-    const [valorMostrarAlerta, setValorMostrarAlerta] = useState(0);
+    const [valorMostrarAlerta, setValorMostrarAlerta] = useState(null);
 
     useEffect(() => {
-        let intervalo = null;
+        if (!contar) return;
 
-        if (contar) {
-            intervalo = setInterval(() => {
-                setContador((prev) => {
-                    if (regresivo) {
-                        return prev > 0 ? prev - 1 : 0;
-                    }
-                    return prev + 1;
-                });
-            }, 1000);
-        } else {
-            clearInterval(intervalo);
-        }
+        const intervalo = setInterval(() => {
+            setContador((prev) => {
+                if (regresivo) return prev > 0 ? prev - 1 : 0;
+                return prev + 1;
+            });
+        }, 1000);
 
         return () => clearInterval(intervalo);
     }, [contar, regresivo]);
@@ -49,7 +44,7 @@ export const SecondsCounter = () => {
     }, [contador, regresivo, valorRegresivo]);
 
     useEffect(() => {
-        if (valorMostrarAlerta !== 0 && contador === valorMostrarAlerta) {
+        if (valorMostrarAlerta !== null && contador === valorMostrarAlerta) {
             mostarSwal(
                 'error',
                 `Alerta\nYa han pasado los ${valorAlerta} segundos`,
@@ -57,7 +52,7 @@ export const SecondsCounter = () => {
 
             setValorAlerta(10);
             setAlerta(false);
-            setValorMostrarAlerta(0);
+            setValorMostrarAlerta(null);
         }
     }, [contador, alerta]);
 
@@ -96,18 +91,19 @@ export const SecondsCounter = () => {
         setValorRegresivo(10);
         setAlerta(false);
         setValorAlerta(10);
-        setValorMostrarAlerta(0);
+        setValorMostrarAlerta(null);
     };
 
     const handleClickAlerta = () => {
-        const iniciarAlerta = contador + valorAlerta;
-
-        setValorMostrarAlerta(iniciarAlerta);
+        setValorMostrarAlerta(contador + valorAlerta);
         setAlerta(true);
         setRegresivo(false);
     };
 
-    const digitos = contador.toString().padStart(6, '0').split('');
+    const digitos = useMemo(
+        () => contador.toString().padStart(NUMERO_DIGITOS, '0').split(''),
+        [contador],
+    );
 
     return (
         <>
@@ -140,7 +136,6 @@ export const SecondsCounter = () => {
                                     <div className="form-floating">
                                         <input
                                             type="number"
-                                            id="cuentaAtras"
                                             className="form-control text-end"
                                             value={valorRegresivo}
                                             min={1}
@@ -162,11 +157,11 @@ export const SecondsCounter = () => {
                                 <div className="card-footer">
                                     <button
                                         type="submit"
-                                        className={
-                                            regresivo || alerta
-                                                ? 'btn btn-secondary text-muted w-100'
-                                                : 'btn btn-warning w-100'
-                                        }
+                                        className={`w-100 btn ${
+                                            alerta || regresivo
+                                                ? 'btn-secondary text-muted'
+                                                : 'btn-warning'
+                                        }`}
                                         disabled={regresivo || alerta}
                                     >
                                         <i className="fa-solid fa-clock-rotate-left"></i>{' '}
@@ -183,38 +178,30 @@ export const SecondsCounter = () => {
                                     Opciones de contador
                                 </h5>
                             </div>
-                            <div className="card-body d-grid gap-2">
+                            <div className="card-body d-grid">
                                 <div className="btn-group">
                                     <button
                                         onClick={handleClickParar}
-                                        className={
-                                            contar
-                                                ? 'btn btn-warning'
-                                                : 'btn btn-secondary text-muted'
-                                        }
+                                        className={`btn ${contar ? 'btn-warning' : 'btn-secondary text-muted'}`}
                                         disabled={!contar}
                                         title="Pausar"
                                     >
-                                        <i className="fa-solid fa-pause fa-2x"></i>{' '}
+                                        <i className="fa-solid fa-pause"></i>{' '}
                                     </button>
                                     <button
                                         onClick={handleClickReanudar}
-                                        className={
-                                            contar
-                                                ? 'btn btn-secondary text-muted'
-                                                : 'btn btn-warning'
-                                        }
+                                        className={`btn ${!contar ? 'btn-warning' : 'btn-secondary text-muted'}`}
                                         disabled={contar}
                                         title="Reanudar"
                                     >
-                                        <i className="fa-solid fa-play fa-2x"></i>{' '}
+                                        <i className="fa-solid fa-play"></i>{' '}
                                     </button>
                                     <button
                                         onClick={handleClickReiniciar}
                                         className="btn btn-danger"
                                         title="Reiniciar"
                                     >
-                                        <i className="fa-solid fa-rotate fa-2x"></i>{' '}
+                                        <i className="fa-solid fa-rotate"></i>{' '}
                                     </button>
                                 </div>
                             </div>
@@ -254,11 +241,11 @@ export const SecondsCounter = () => {
                                 <div className="card-footer">
                                     <button
                                         type="submit"
-                                        className={
+                                        className={`w-100 btn ${
                                             alerta || regresivo
-                                                ? 'btn btn-secondary text-muted w-100'
-                                                : 'btn btn-warning w-100'
-                                        }
+                                                ? 'btn-secondary text-muted'
+                                                : 'btn-warning'
+                                        }`}
                                         disabled={alerta || regresivo}
                                     >
                                         <i className="fa-solid fa-alarm-clock"></i>{' '}
