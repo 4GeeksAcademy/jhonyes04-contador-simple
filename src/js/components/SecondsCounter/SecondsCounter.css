@@ -1,0 +1,7 @@
+body {
+    background: lightgray;
+}
+
+.container {
+    min-width: 360px;
+}
