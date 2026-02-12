@@ -41,7 +41,7 @@ export const SecondsCounter = () => {
             setRegresivo(false);
             setValorRegresivo(10);
         }
-    }, [contador, regresivo, valorRegresivo]);
+    }, [contador, regresivo]);
 
     useEffect(() => {
         if (valorMostrarAlerta !== null && contador === valorMostrarAlerta) {
