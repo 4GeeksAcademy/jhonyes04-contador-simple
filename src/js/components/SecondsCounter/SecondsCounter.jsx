@@ -46,7 +46,7 @@ export const SecondsCounter = () => {
     useEffect(() => {
         if (valorMostrarAlerta !== null && contador === valorMostrarAlerta) {
             mostarSwal(
-                'error',
+                'warning',
                 `Alerta\nYa han pasado los ${valorAlerta} segundos`,
             );
 
