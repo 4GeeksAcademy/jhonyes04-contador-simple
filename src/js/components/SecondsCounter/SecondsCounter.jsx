@@ -1,62 +1,66 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { SecondsCounterDisplay } from './SecondsCounterDisplay';
+import { SecondsCounterInputs } from './SecondsCounterInputs';
 
+import Swal from 'sweetalert2';
 import './SecondsCounter.css';
 
-const NUMERO_DIGITOS = 6;
-
 export const SecondsCounter = () => {
+    // Estados principales
     const [contar, setContar] = useState(true);
     const [contador, setContador] = useState(0);
+    const [modo, setModo] = useState({ regresivo: false, alerta: false });
 
-    const [regresivo, setRegresivo] = useState(false);
-    const [valorRegresivo, setValorRegresivo] = useState(10);
-
-    const [alerta, setAlerta] = useState(false);
-    const [valorAlerta, setValorAlerta] = useState(10);
+    // Valores de configuración de los inputs
+    const [config, setConfig] = useState({ regresivo: 10, alerta: 10 });
     const [valorMostrarAlerta, setValorMostrarAlerta] = useState(null);
 
+    // OPTIMIZACIÓN: Memorizar los dígitos para no procesar strings en cada render innecesario
+    const digitos = useMemo(
+        () => contador.toString().padStart(6, '0').split(''),
+        [contador],
+    );
+
+    // 1. UN SOLO EFECTO PARA EL TIEMPO
     useEffect(() => {
         if (!contar) return;
 
         const intervalo = setInterval(() => {
             setContador((prev) => {
-                if (regresivo) return prev > 0 ? prev - 1 : 0;
+                if (modo.regresivo) return prev > 0 ? prev - 1 : 0;
                 return prev + 1;
             });
         }, 1000);
 
         return () => clearInterval(intervalo);
-    }, [contar, regresivo]);
+    }, [contar, modo.regresivo]);
 
+    // 2. LÓGICA DE EVENTOS (Alertas)
     useEffect(() => {
-        if (regresivo && contador === 0 && contar) {
+        // Caso: Cuenta atrás termina
+        if (modo.regresivo && contador === 0 && contar) {
             setContar(false);
-
-            mostarSwal(
+            lanzarSwal(
                 'success',
-                `Ya terminó la cuenta atrás de ${valorRegresivo} segundos`,
+                `Terminó la cuenta atrás de ${config.regresivo} segundos`,
             );
 
-            setRegresivo(false);
-            setValorRegresivo(10);
+            setModo((prev) => ({ ...prev, regresivo: false }));
         }
-    }, [contador, regresivo]);
 
-    useEffect(() => {
+        // Caso: Alerta programada
         if (valorMostrarAlerta !== null && contador === valorMostrarAlerta) {
-            mostarSwal(
-                'warning',
-                `Alerta\nYa han pasado los ${valorAlerta} segundos`,
+            lanzarSwal(
+                'error',
+                `Han pasado los ${config.alerta} segundos programados`,
             );
-
-            setValorAlerta(10);
-            setAlerta(false);
             setValorMostrarAlerta(null);
+            setModo((prev) => ({ ...prev, alerta: false }));
         }
-    }, [contador, alerta]);
+    }, [contador, modo, valorMostrarAlerta, contar, config]);
 
-    const mostarSwal = (icon, title) => {
+    // Función auxiliar para no repetir código de Swal
+    const lanzarSwal = (icon, title) => {
         Swal.fire({
             position: 'center',
             theme: 'auto',
@@ -69,194 +73,97 @@ export const SecondsCounter = () => {
         });
     };
 
-    const handleClickRegresivo = () => {
-        setContador(valorRegresivo);
-        setContar(true);
-        setRegresivo(true);
-        setAlerta(false);
+    // --- Handlers Optimizados ---
+    const handleAction = (tipo) => {
+        if (tipo === 'regresivo') {
+            setContador(config.regresivo);
+            setModo({ regresivo: true, alerta: false });
+            setContar(true);
+        } else if (tipo === 'alerta') {
+            setValorMostrarAlerta(contador + config.alerta);
+            setModo((prev) => ({ ...prev, alerta: true, regresivo: false }));
+        }
     };
 
-    const handleClickParar = () => {
-        setContar(false);
-    };
-
-    const handleClickReanudar = () => {
-        setContar(true);
-    };
-
-    const handleClickReiniciar = () => {
+    const reiniciar = () => {
         setContador(0);
         setContar(true);
-        setRegresivo(false);
-        setValorRegresivo(10);
-        setAlerta(false);
-        setValorAlerta(10);
+        setModo({ regresivo: false, alerta: false });
         setValorMostrarAlerta(null);
     };
 
-    const handleClickAlerta = () => {
-        setValorMostrarAlerta(contador + valorAlerta);
-        setAlerta(true);
-        setRegresivo(false);
-    };
-
-    const digitos = useMemo(
-        () => contador.toString().padStart(NUMERO_DIGITOS, '0').split(''),
-        [contador],
-    );
-
     return (
-        <>
-            <div className="container mt-4">
-                <div className="card bg-dark">
-                    <div className="card-body">
-                        <div className="row bg-dark justify-content-center align-items-center text-white">
-                            <div className="col-12 col-md-2 display-4 text-center pb-2 pb-md-0">
-                                <i className="fa-regular fa-clock"></i>
-                            </div>
-
-                            <SecondsCounterDisplay digitos={digitos} />
+        <div className="container mt-4">
+            <div className="card bg-dark mb-4">
+                <div className="card-body">
+                    <div className="row justify-content-center align-items-center text-white">
+                        <div className="col-12 col-md-2 display-4 text-center mb-2 mb-md-0">
+                            <i className="fa-regular fa-clock"></i>
                         </div>
-                    </div>
-                </div>
-
-                <div className="row text-center py-4">
-                    <div className="col-12 col-md-4 my-2 my-md-0">
-                        <div className="card h-100">
-                            <div className="card-header">
-                                <h5 className="card-title">Cuenta atrás</h5>
-                            </div>
-                            <form
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    handleClickRegresivo();
-                                }}
-                            >
-                                <div className="card-body">
-                                    <div className="form-floating">
-                                        <input
-                                            type="number"
-                                            className="form-control text-end"
-                                            value={valorRegresivo}
-                                            min={1}
-                                            max={999999}
-                                            disabled={regresivo || alerta}
-                                            onChange={(event) =>
-                                                setValorRegresivo(
-                                                    parseInt(
-                                                        event.target.value,
-                                                    ) || 10,
-                                                )
-                                            }
-                                        />
-                                        <label htmlFor="cuentaAtras">
-                                            Iniciar en
-                                        </label>
-                                    </div>
-                                </div>
-                                <div className="card-footer">
-                                    <button
-                                        type="submit"
-                                        className={`w-100 btn ${
-                                            alerta || regresivo
-                                                ? 'btn-secondary text-muted'
-                                                : 'btn-warning'
-                                        }`}
-                                        disabled={regresivo || alerta}
-                                    >
-                                        <i className="fa-solid fa-clock-rotate-left"></i>{' '}
-                                        Inciar cuenta atrás
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <div className="col-12 col-md-4 my-2 my-md-0">
-                        <div className="card h-100">
-                            <div className="card-header">
-                                <h5 className="card-title">
-                                    Opciones de contador
-                                </h5>
-                            </div>
-                            <div className="card-body d-grid">
-                                <div className="btn-group">
-                                    <button
-                                        onClick={handleClickParar}
-                                        className={`btn ${contar ? 'btn-warning' : 'btn-secondary text-muted'}`}
-                                        disabled={!contar}
-                                        title="Pausar"
-                                    >
-                                        <i className="fa-solid fa-pause"></i>{' '}
-                                    </button>
-                                    <button
-                                        onClick={handleClickReanudar}
-                                        className={`btn ${!contar ? 'btn-warning' : 'btn-secondary text-muted'}`}
-                                        disabled={contar}
-                                        title="Reanudar"
-                                    >
-                                        <i className="fa-solid fa-play"></i>{' '}
-                                    </button>
-                                    <button
-                                        onClick={handleClickReiniciar}
-                                        className="btn btn-danger"
-                                        title="Reiniciar"
-                                    >
-                                        <i className="fa-solid fa-rotate"></i>{' '}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="col-12 col-md-4 my-2 my-md-0">
-                        <div className="card h-100">
-                            <div className="card-header">
-                                <h5 className="card-title">Alerta</h5>
-                            </div>
-                            <form
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    handleClickAlerta();
-                                }}
-                            >
-                                <div className="card-body">
-                                    <div className="form-floating">
-                                        <input
-                                            type="number"
-                                            className="form-control text-end"
-                                            value={valorAlerta}
-                                            min={1}
-                                            max={999999}
-                                            disabled={regresivo || alerta}
-                                            onChange={(event) => {
-                                                setValorAlerta(
-                                                    parseInt(
-                                                        event.target.value,
-                                                    ) || 10,
-                                                );
-                                            }}
-                                        />
-                                        <label>Mostrar alerta en...</label>
-                                    </div>
-                                </div>
-                                <div className="card-footer">
-                                    <button
-                                        type="submit"
-                                        className={`w-100 btn ${
-                                            alerta || regresivo
-                                                ? 'btn-secondary text-muted'
-                                                : 'btn-warning'
-                                        }`}
-                                        disabled={alerta || regresivo}
-                                    >
-                                        <i className="fa-solid fa-alarm-clock"></i>{' '}
-                                        Activar alerta
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                        <SecondsCounterDisplay digitos={digitos} />
                     </div>
                 </div>
             </div>
-        </>
+
+            <div className="row text-center py-4">
+                <SecondsCounterInputs
+                    titulo="Cuenta atrás"
+                    label="Empezar en..."
+                    labelBoton="Iniciar cuenta atrás"
+                    icon="fa-clock-rotate-left"
+                    value={config.regresivo}
+                    onChange={(valor) =>
+                        setConfig({ ...config, regresivo: valor })
+                    }
+                    onSubmit={() => handleAction('regresivo')}
+                    disabled={modo.regresivo || modo.alerta}
+                />
+
+                <div className="col-12 col-md-4 mb-3">
+                    <div className="card h-100">
+                        <div className="card-header">
+                            <h5 className="card-title">Controles</h5>
+                        </div>
+                        <div className="card-body d-grid gap-2">
+                            <div className="btn-group">
+                                <button
+                                    onClick={() => setContar(false)}
+                                    className={`btn ${contar ? 'btn-warning' : 'btn-secondary'}`}
+                                    disabled={!contar}
+                                >
+                                    <i className="fa-solid fa-pause fa-2x"></i>
+                                </button>
+                                <button
+                                    onClick={() => setContar(true)}
+                                    className={`btn ${!contar ? 'btn-warning' : 'btn-secondary'}`}
+                                    disabled={contar}
+                                >
+                                    <i className="fa-solid fa-play fa-2x"></i>
+                                </button>
+                                <button
+                                    onClick={reiniciar}
+                                    className="btn btn-danger"
+                                >
+                                    <i className="fa-solid fa-rotate fa-2x"></i>{' '}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <SecondsCounterInputs
+                    titulo="Alerta"
+                    label="Mostrar alerta en..."
+                    labelBoton="Activar alerta"
+                    icon="fa-bell"
+                    value={config.alerta}
+                    onChange={(valor) =>
+                        setConfig({ ...config, alerta: valor })
+                    }
+                    onSubmit={() => handleAction('alerta')}
+                    disabled={modo.regresivo || modo.alerta}
+                />
+            </div>
+        </div>
     );
 };
